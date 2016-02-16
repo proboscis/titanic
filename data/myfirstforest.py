@@ -1,314 +1,97 @@
+""" Writing my first randomforest code.
+Author : AstroDave
+Date : 23rd September 2012
+Revised: 15 April 2014
+please see packages.python.org/milk/randomforests.html for more
+
+""" 
+import pandas as pd
+import numpy as np
+import csv as csv
+from sklearn.ensemble import RandomForestClassifier
+
+# Data cleanup
+# TRAIN DATA
+train_df = pd.read_csv('train.csv', header=0)        # Load the train file into a dataframe
+
+# I need to convert all strings to integer classifiers.
+# I need to fill in the missing values of the data and make it complete.
+
+# female = 0, Male = 1
+train_df['Gender'] = train_df['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
+
+# Embarked from 'C', 'Q', 'S'
+# Note this is not ideal: in translating categories to numbers, Port "2" is not 2 times greater than Port "1", etc.
+
+# All missing Embarked -> just make them embark from most common place
+if len(train_df.Embarked[ train_df.Embarked.isnull() ]) > 0:
+    train_df.Embarked[ train_df.Embarked.isnull() ] = train_df.Embarked.dropna().mode().values
+
+Ports = list(enumerate(np.unique(train_df['Embarked'])))    # determine all values of Embarked,
+Ports_dict = { name : i for i, name in Ports }              # set up a dictionary in the form  Ports : index
+train_df.Embarked = train_df.Embarked.map( lambda x: Ports_dict[x]).astype(int)     # Convert all Embark strings to int
+
+# All the ages with no data -> make the median of all Ages
+median_age = train_df['Age'].dropna().median()
+if len(train_df.Age[ train_df.Age.isnull() ]) > 0:
+    train_df.loc[ (train_df.Age.isnull()), 'Age'] = median_age
+
+# Remove the Name column, Cabin, Ticket, and Sex (since I copied and filled it to Gender)
+train_df = train_df.drop(['Name', 'Sex', 'Ticket', 'Cabin', 'PassengerId'], axis=1) 
 
 
-<!DOCTYPE html>
+# TEST DATA
+test_df = pd.read_csv('test.csv', header=0)        # Load the test file into a dataframe
 
-<!--[if lt IE 7 ]><html class="ie ie6 lte7 lte8 lte9"><![endif]-->
-<!--[if IE 7 ]><html class="ie ie7 lte7 lte8 lte9"><![endif]-->
-<!--[if IE 8 ]><html class="ie ie8 lte8 lte9"><![endif]-->
-<!--[if IE 9 ]><html class="ie ie9 lte9"><![endif]-->
-<!--[if (gt IE 9)|!(IE)]><!--><html ><!--<![endif]-->
+# I need to do the same with the test data now, so that the columns are the same as the training data
+# I need to convert all strings to integer classifiers:
+# female = 0, Male = 1
+test_df['Gender'] = test_df['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
 
-<head>
-    <link href='//fonts.googleapis.com/css?family=Merriweather:400,700|Open+Sans:300,400italic,700italic,400,700' rel='stylesheet' type='text/css'> 
-
-    
-    <link rel="stylesheet" href="/content/v/1fb55cec3f8f/shared/css/font-awesome.min.css">
-
-    
-    
-    <title>Login | Kaggle</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="robots" content="index, follow" />
-    <link href="/content/v/4e3f994e938b/kaggle/favicon.ico" rel="shortcut icon" type="image/x-icon" />
-
-    
-        <meta name="keywords" content="Kaggle, data science, big analytics, data mining, forecasting, statistics, prediction, bioinformatics, competitions, contests, crowdsourced analytics" />
-            <meta name="description" content="Kaggle is a platform for data prediction competitions. Companies, organizations and researchers post their data and have it scrutinized by the world&#39;s best statisticians." />
-
-            <link rel="stylesheet" href="/content/v/1fc20364f0a7/shared/css/base.less" type="text/css" />
-        <link rel="stylesheet" href="/content/v/e1cd6968c0d2/kaggle/css/kaggle-site.less" type="text/css" />
-
-        <script type="text/javascript" src="/content/v/47b68dce8cb6/shared/js/jquery-1.7.2.min.js"></script>
-            <script type="text/javascript" src="/content/v/7846b5904b60/shared/js/jquery-ui-1.9.2.min.js"></script>
-
-    
-        <script type="text/javascript" src="/content/v/a60ecf3c5c7d/shared/js/kaggle.min.js"></script>
-        <script type="text/javascript">
-            
-            Kaggle.Current.siteId = 1;
-                    </script>
-
-    
-    <!--[if (gte IE 6)&(lte IE 8)]>
-        <script type="text/javascript" src="/content/v/f1f17fea7cee/shared/js/ie/selectivizr.min.js"></script>
-    <![endif]-->
-
-    
-                                        
-                                                                        
-                    <link rel="apple-touch-icon" href="/content/v/1e4cdaa83f46/kaggle/img/apple-touch-icon.png" />
+# Embarked from 'C', 'Q', 'S'
+# All missing Embarked -> just make them embark from most common place
+if len(test_df.Embarked[ test_df.Embarked.isnull() ]) > 0:
+    test_df.Embarked[ test_df.Embarked.isnull() ] = test_df.Embarked.dropna().mode().values
+# Again convert all Embarked strings to int
+test_df.Embarked = test_df.Embarked.map( lambda x: Ports_dict[x]).astype(int)
 
 
-    
-    <!--[if lt IE 9]>
-        <script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    
-    
-</head>
-<body class="logged-out    kaggle">
-    <div id="watermark1" class=""></div>
-    <div id="watermark2" class=""></div>
-    <div id="wrap"><!-- needed for sticky footer -->
+# All the ages with no data -> make the median of all Ages
+median_age = test_df['Age'].dropna().median()
+if len(test_df.Age[ test_df.Age.isnull() ]) > 0:
+    test_df.loc[ (test_df.Age.isnull()), 'Age'] = median_age
+
+# All the missing Fares -> assume median of their respective class
+if len(test_df.Fare[ test_df.Fare.isnull() ]) > 0:
+    median_fare = np.zeros(3)
+    for f in range(0,3):                                              # loop 0 to 2
+        median_fare[f] = test_df[ test_df.Pclass == f+1 ]['Fare'].dropna().median()
+    for f in range(0,3):                                              # loop 0 to 2
+        test_df.loc[ (test_df.Fare.isnull()) & (test_df.Pclass == f+1 ), 'Fare'] = median_fare[f]
+
+# Collect the test data's PassengerIds before dropping it
+ids = test_df['PassengerId'].values
+# Remove the Name column, Cabin, Ticket, and Sex (since I copied and filled it to Gender)
+test_df = test_df.drop(['Name', 'Sex', 'Ticket', 'Cabin', 'PassengerId'], axis=1) 
 
 
-<div id="menu-open-overlay"></div>
-
-<div id="header2" class="">
-    <div id="header2-inside" class=>
-        <a id="logo" href="/"><img alt="Kaggle" height="86" src="/content/v/9da25a3f126b/kaggle/img/site-logo.png" width="240" /></a>
-
-            <ul id="header-ul">
-                <li>
-  <a href="/solutions/competitions">Host</a>
-</li>
-<li>
-  <a href="/competitions">Competitions</a>
-</li>
-<li>
-  <a href="/datasets">Datasets</a>
-</li>
-<li>
-  <a href="/scripts">Scripts</a>
-</li>
-<li>
-  <a href="/jobs">Jobs</a>
-</li>
-<li>
-<a href="">Community &#9662;</a>
-<ul>
-  <li><a href='/users'>User Rankings</a></li>
-  <li><a href='/forums'>Forum</a></li>
-  <li><a href="http://blog.kaggle.com" target="_blank">Blog</a></li>
-  <li><a href='/Wiki'>Wiki</a></li>
-</ul>
-</li><!-- <script>
-  $(function(){
-    if (!$('body.logged-in').length) {
-      $('a.logged-in-only').hide().parent().next().find('a').css('padding-top','10px');
-    }
-  });
-</script> -->
-            </ul>
-
-        <script>
-            jQuery(function () {
-                jQuery('#header-ul li:has(ul) > a').click(function (e) {
-                    e.preventDefault();
-
-                    jQuery('#header-ul li').not(jQuery(this).parent()).find('ul').removeClass('open');
-                    jQuery(this).parent().find('ul').toggleClass('open');
-                    jQuery('#menu-open-overlay').show();
-                });
-
-                jQuery('#menu-open-overlay').click(function () {
-                    jQuery('#header-ul ul').removeClass('open');
-                    jQuery('#top-bar-signin').hide();
-                    jQuery(this).hide();
-                });
-
-            });
-        </script>
-
-        <ul id="header-control">
-                <li id="header-signup"><a href="/account/register"><strong><text>Sign up</text></strong></a></li>
-                <li id="header-login">
-                    <a href="/account/login?returnUrl=%2Faccount%2Flogin%3FReturnUrl%3D%252fc%252ftitanic%252fdownload%252fmyfirstforest.py" class="login-link">Login</a>
-                </li>
-        </ul>
-            <div id="top-bar-signin">
-                <div id="social-authentication-top">
-    <div id="social-authentication-top-head">
-        Log in<br/>
-        with &mdash;
-    </div>
-    <div id="social-authentication-top-buttons">
-        <a href="/account/authenticate/facebook" class="socialSignIn facebook" title="Log in with Facebook"><img src="/content/v/368347303d78/shared/img/auth-facebook.png" width="36" height="36" alt="Sign up with Facebook" title="Sign up with Facebook" /></a>
-        <a href="/account/authenticate/google" class="socialSignIn google" title="Log in with Google"><img src="/content/v/ace060e512d3/shared/img/auth-google.png" width="36" height="36" alt="Sign up with Google" title="Sign up with Google" /></a>
-        <a href="/account/authenticate/yahoo" class="socialSignIn yahoo" title="Log in with Yahoo"><img src="/content/v/2ff11e08ba40/shared/img/auth-yahoo.png" width="36" height="36" alt="Sign up with Yahoo" title="Sign up with Yahoo" /></a>
-    </div>
-    
-    <script type="text/javascript">
-        var socialSignInLinks = $('a.socialSignIn');
-        socialSignInLinks.attr("href", function(i,v){
-            return v + '?js=1';
-        });
-        socialSignInLinks.click(function(){
-            _gaq.push(['_trackEvent', 'action', 'login', 'top-bar']);
-            return true;
-        });
-    </script>
-</div>
-    
-
-<form action="/account/login" id="signin" method="post"><input id="returnUrl" name="returnUrl" type="hidden" value="https://www.kaggle.com/account/login?ReturnUrl=%2fc%2ftitanic%2fdownload%2fmyfirstforest.py" /><input data-val="true" data-val-length="The field User name must be a string with a minimum length of 2 and a maximum length of 255." data-val-length-max="255" data-val-length-min="2" data-val-required="The User name field is required." id="UserName" name="UserName" placeholder="Email / username" type="text" value="" /><span class="field-validation-valid" data-valmsg-for="UserName" data-valmsg-replace="true"></span><input data-val="true" data-val-length="The field Password must be a string with a minimum length of 1 and a maximum length of 255." data-val-length-max="255" data-val-length-min="1" data-val-required="The Password field is required." id="Password" name="Password" placeholder="Password" type="password" /><span class="field-validation-valid" data-valmsg-for="Password" data-valmsg-replace="true"></span>    <div id="remember-me">
-        <input data-val="true" data-val-required="The Remember me? field is required." id="RememberMe" name="RememberMe" type="checkbox" value="true" /><input name="RememberMe" type="hidden" value="false" />            
-        <label for="RememberMe">Remember me?</label>
-    </div>   
-    <input type="submit" value="Login" />
-<input name="__RequestVerificationToken" type="hidden" value="Z3Mn9CqdFnSsCyrH8bL0Rb6r7Wz-IeqQG12HD1dG0dCiCxdlxqMvkdLKk87GxAgjhURRQ3mtBpSbctRLmGpiBkr5zcQ1" />    <input id="signinjs" type="hidden" name="JavaScriptEnabled" value="false" />    
-</form>
-<script type="text/javascript">
-    $('#signinjs').attr('value', 'true');
-    $('#signin').submit(function () { _gaq.push(['_trackEvent', 'action', 'login', 'top-bar']); });
-</script>
-
-<div id="forgot-links">        
-    Forgot your <a href="/forgot/username">Username</a> 
-    / 
-    <a href="/forgot/password">Password</a>?
-</div>
-
-            </div>
-            <script>
-                jQuery(function () {
-                    jQuery('.login-link').click(function (e) {
-                        e.preventDefault();
-                        jQuery('#top-bar-signin').toggle();
-                        jQuery('#menu-open-overlay').toggle();
-                        if (jQuery('#top-bar-signin').is(":visible")) {
-                            jQuery('#UserName').focus();
-                        }
-                    });
-                });
-            </script>
-    </div>
-</div>
+# The data is now ready to go. So lets fit to the train, then predict to the test!
+# Convert back to a numpy array
+train_data = train_df.values
+test_data = test_df.values
 
 
+print 'Training...'
+forest = RandomForestClassifier(n_estimators=100)
+forest = forest.fit( train_data[0::,1::], train_data[0::,0] )
+
+print 'Predicting...'
+output = forest.predict(test_data).astype(int)
 
 
-
-
-
-        
-
-        <!-- header-inside and header -->
-
-<div id="standalone-signin">
-    <div class="validation-summary-valid" data-valmsg-summary="true"><ul><li style="display:none"></li>
-</ul></div>
-    <form action="/account/login" id="login-account" method="post">    <fieldset id="social-authentication">
-        <a href="/account/authenticate/facebook" class="standaloneSocialSignIn" title="Login with Facebook"><img width='95' height="95" src="/content/v/368347303d78/shared/img/auth-facebook.png" alt="Login with Facebook" /></a>
-        <a href="/account/authenticate/google" class="standaloneSocialSignIn" title="Login with Google"><img width='95' height="95" src="/content/v/ace060e512d3/shared/img/auth-google.png" alt="Login with Google" /></a>
-        <a href="/account/authenticate/yahoo" class="standaloneSocialSignIn" title="Login with Yahoo"><img width='95' height="95" src="/content/v/2ff11e08ba40/shared/img/auth-yahoo.png" alt="Login with Yahoo" /></a>
-        
-    </fieldset> 
-<script type="text/javascript">
-        var standaloneSocialSignInLinks = $('a.standaloneSocialSignIn');
-        standaloneSocialSignInLinks.attr("href", function(i,v){
-            return v + '?js=1';
-        });
-        standaloneSocialSignInLinks.click(function(){
-            _gaq.push(['_trackEvent', 'action', 'login', 'standalone']);
-            return true;
-        });
-    </script>    <fieldset>
-        
-        <div class="field">
-            <label>Email / username</label>
-            <a href="/forgot/username" class="field-forgot-link" tabindex="4">Forgot username?</a>
-            <input data-val="true" data-val-length="The field User name must be a string with a minimum length of 2 and a maximum length of 255." data-val-length-max="255" data-val-length-min="2" data-val-required="The User name field is required." id="UserName" name="UserName" tabindex="1" type="text" value="" />
-            <span class="field-validation-valid" data-valmsg-for="UserName" data-valmsg-replace="true"></span>
-        </div>
-
-        <div class="field">
-            <label for="Password">Password</label>
-            <a href="/forgot/password" class="field-forgot-link" tabindex="5">Forgot password?</a>
-            <input data-val="true" data-val-length="The field Password must be a string with a minimum length of 1 and a maximum length of 255." data-val-length-max="255" data-val-length-min="1" data-val-required="The Password field is required." id="Password" name="Password" tabindex="2" type="password" />
-            <span class="field-validation-valid" data-valmsg-for="Password" data-valmsg-replace="true"></span>
-        </div>
-
-        <div class="field">
-            <input id="get-started" type="submit" value = "Login" tabindex="3" />
-            <input id="standalonesigninjs" type="hidden" name="JavaScriptEnabled" value="false" />
-        </div>
-          
-    </fieldset>   
-</form>
-<script type="text/javascript">
-    $('#standalonesigninjs').attr('value', 'true');
-    $('#login-account').submit(function () { _gaq.push(['_trackEvent', 'action', 'login', 'standalone']); });
-</script>
-
-<div id="login-page-signup" class="no-oauth">
-    <label><a href="/account/register" tabindex="6">Create an account &raquo;</a></label>
-</div>
- 
-
-
-</div>
-    </div> <!-- wrap -->
-    
-        <div id="footer">
-            <div id="footer-inside">
-                <div id="footer-social">
-                        <div id="social-links">
-            <a class="twitter" href="http://www.twitter.com/kaggle" title="Follow Kaggle on Twitter"></a>     
-                    <a class="facebook" href="http://www.facebook.com/kaggle" title="Follow Kaggle on Facebook"></a>           
-                    <a class="linkedin" href="http://www.linkedin.com/companies/kaggle" title="Follow Kaggle on LinkedIn"></a>        
-    </div><!-- social-links -->
-
-                </div>
-                <div id="footer-copyright">
-                    
-
-
-&copy; 2016 Kaggle Inc                </div>
-                <div id="footer-links">
-                    <a href="/about">About</a>
-<a href="/team">Our Team</a>
-<a href="/careers">Careers</a>
-<a href="/terms">Terms</a>
-<a href="/privacy">Privacy</a> 
-<!--<a href="/Home/ContactPress">Press</a>-->
-<a href="/Home/contact">Contact/Support</a>
-                </div> <!-- footer-links -->
-            </div> <!-- footer-inside -->
-        </div> <!--footer-->
-
-        
-        <script type="text/javascript">
-            var _gaq = _gaq || [];
-            _gaq.push(['_setAccount', 'UA-12629138-1']);
-            _gaq.push(['_trackPageview']);
-            _gaq.push(['_trackPageLoadTime']);
-            _gaq.push(['_setCustomVar', 1, 'usertype', 'anonymous', 2]);
-            (function () {
-                var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-                ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-                var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-            })();
-        </script>
-        <script type="text/javascript">
-            /**
-        * Function that tracks a click on an outbound link in Google Analytics.
-        * This function takes a valid URL string as an argument, and uses that URL string
-        * as the event label.
-        * See: https://support.google.com/analytics/answer/1136920?hl=en
-        */
-            var trackOutboundLink = function(url) {
-                ga('send', 'event', 'outbound', 'click', url, {'hitCallback':
-                        function () {
-                            document.location = url;
-                        }
-                });
-            }
-        </script>
-
-
-    
-
-    <!-- Cheers, RD00155D488B32p. -->
-</body>
-</html>
+predictions_file = open("myfirstforest.csv", "wb")
+open_file_object = csv.writer(predictions_file)
+open_file_object.writerow(["PassengerId","Survived"])
+open_file_object.writerows(zip(ids, output))
+predictions_file.close()
+print 'Done.'
