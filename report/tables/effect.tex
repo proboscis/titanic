@@ -1,0 +1,14 @@
+\begin{tabular}{rrrr}
+    \hline
+    \hline
+    Model & LR(MSE) & LR(MAE) & MLP(MAE)\\
+    \hline
+    前処理なし & 3209$\pm176$ & 2509$\pm155$ & 2523$\pm405$\\
+    曜日情報なし & 3204$\pm177$ & 2512$\pm152$ & -\\
+    PCA & 3209$\pm176$ & 3510$\pm157$ & -\\
+    Log & 3269$\pm159$ & 3190$\pm156$ & -\\
+    曜日情報なし,Log & 3265$\pm159$ & 3192$\pm156$ & -\\
+    曜日情報無し,PCA & 3204$\pm177$ & 3509$\pm157$ & -\\
+    Log,PCA & 3269$\pm159$ & 3509$\pm156$ & -\\
+    \hline
+\end{tabular}

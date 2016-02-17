@@ -1,0 +1,14 @@
+\begin{thebibliography}{1}
+
+\bibitem{elu}
+Djork-Arn{\'e} Clevert, Thomas Unterthiner, and Sepp Hochreiter.
+\newblock Fast and accurate deep network learning by exponential linear units
+  (elus).
+\newblock {\em arXiv preprint arXiv:1511.07289}, 2015.
+
+\bibitem{adam}
+Diederik Kingma and Jimmy Ba.
+\newblock Adam: A method for stochastic optimization.
+\newblock {\em arXiv preprint arXiv:1412.6980}, 2014.
+
+\end{thebibliography}
